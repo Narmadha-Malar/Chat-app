@@ -1,0 +1,49 @@
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+app.use(express.static(__dirname));
+
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/index.html');
+});
+
+io.on('connection', (socket) => {
+  console.log('User connected');
+
+  socket.on('join', (username) => {
+    socket.username = username;
+    io.emit('message', {
+      user: 'System',
+      text: username + ' joined the chat 👋',
+      type: 'system'
+    });
+  });
+
+  socket.on('message', (data) => {
+    io.emit('message', {
+      user: data.user,
+      text: data.text,
+      type: 'chat'
+    });
+  });
+
+  socket.on('disconnect', () => {
+    if (socket.username) {
+      io.emit('message', {
+        user: 'System',
+        text: socket.username + ' left the chat',
+        type: 'system'
+      });
+    }
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log('Server running on port ' + PORT);
+});
